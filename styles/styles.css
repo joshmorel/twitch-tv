@@ -1,0 +1,45 @@
+
+main {
+  display: -webkit-flex; /* required for mobile safari */
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+
+}
+
+td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-overflow: ellipsis;
+  max-width: 600px;
+}
+
+.offline, .streaming {
+  cursor: pointer;
+}
+
+.offline:hover {
+  background-color: lightgray;
+}
+
+.streaming:hover {
+  background-color: green;
+}
+
+.logo {
+  width: 2em;
+  height: 2em;
+}
+
+@-webkit-keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
