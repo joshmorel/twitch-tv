@@ -1,6 +1,6 @@
 # Twitch.tv Lister
 
-Completion of Use the Twitchtv JSON API Free Code Camp challenge utilizing:
+Completion of Use the Twitchtv JSON API [Free Code Camp](https://www.freecodecamp.org) challenge utilizing Vanilla JS (ES6).
 
 ## Example
 
@@ -8,9 +8,9 @@ https://codepen.io/freeCodeCamp/full/Myvqmo
 
 ## User Stories
 
-- [ ] I can see whether Free Code Camp is currently streaming on Twitch.tv.
-- [ ] I can click the status output and be sent directly to the Free Code Camp's Twitch.tv channel.
-- [ ] if a Twitch user is currently streaming, I can see additional details about what they are streaming.
+- [x] I can see whether Free Code Camp is currently streaming on Twitch.tv.
+- [x] I can click the status output and be sent directly to the Free Code Camp's Twitch.tv channel.
+- [x] if a Twitch user is currently streaming, I can see additional details about what they are streaming.
 
 ## Hints
 

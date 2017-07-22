@@ -74,9 +74,7 @@ const twitchStreams =
 
     const baseUrl = "https://wind-bow.gomix.me/twitch-api";
 
-    // const channelList = ["ESL_SC2",
-
-    const channelList = ["ESL_SC2", "cretetion", "FreeCodeCamp", "OgamingSC2", "storbeck", "Habathcx", "RobotCaleb", "noobs2ninjas"];
+    const channelList = ["ESL_SC2", "FreeCodeCamp","OgamingSC2","RobotCaleb", "cretetion","noopkat", "noobs2ninjas"];
 
     function getChannelData(name) {
       const endpoint = `${baseUrl}/channels/${name}`;
@@ -84,19 +82,23 @@ const twitchStreams =
       return new Promise((resolve, reject) => {
 
         const data = {
-          name: name
+          name: name,
+          status: "Not Found"
         };
 
         fetchJsonp(endpoint).then(blob => blob.json())
           .then(channelData => {
             data.channel = channelData;
-            //only execute streams ajax if channel found
+            //only execute stream call if channel found
             if (!channelData.error) {
               return getStreamData(name);
             }
           })
           .then(streamData => {
-            data.stream = streamData ? streamData.stream : null;
+            if (streamData) {
+              data.stream = streamData.stream;
+              data.status = streamData.stream ? "Streaming" : "Offline";
+            }
             resolve(data);
           })
           .catch((err) => reject(new Error(err)));
@@ -119,7 +121,7 @@ const twitchStreams =
       channelRow.className = "channel not-found";
       channelRow.innerHTML = `<td><img class="logo" src=""/></td>
                           <td><div class="name">${name}</div>
-                          </td><td class="stream"><div class="status">Channel Not Found</div></td>`;
+                          </td><td class="stream">&#x274C; Channel Not Found</td>`;
 
       return channelRow;
     }
@@ -127,79 +129,92 @@ const twitchStreams =
     function createChannelOfflineElement(data) {
       let channelRow = document.createElement("tr");
       channelRow.className = "channel offline";
-      channelRow.innerHTML = `<td><img class="logo" src="${data.channel.logo}"/></td>
-                          <td><div class="name">${data.name}</div>
-                              <small><div class="game">${data.channel.game ? data.channel.game : "n/a"}</div></small>
+      channelRow.innerHTML = `<td><img class="logo" src="${data.channel.logo ? data.channel.logo : ''}"/></td>
+                          <td><a class="name" href="${data.channel.url}" target="_blank" title="In CodePen: right-click -> open link in new tab" rel="noopener noreferrer">${data.name}</a>
+                              ${data.channel.game ? `<div class="game"><small>${data.channel.game}</small></div>` : ''}
                           </td>
-                          <td class="stream"><div class="status">Offline</div></td>`;
+                          <td class="stream">&#x1F6AB; Offline</td>`;
       return channelRow;
     }
 
     function createChannelStreamingElement(data) {
       let channelRow = document.createElement("tr");
       channelRow.className = "channel streaming";
-      channelRow.innerHTML = `<td><img class="logo" src="${data.channel.logo}"/></td>
-                          <td><div class="name">${data.name}</div>
-                              <small><div class="game">${data.channel.game ? data.channel.game : "n/a"}</div></small>
+      channelRow.innerHTML = `<td><img class="logo" src="${data.channel.logo ? data.channel.logo : ''}"/></td>
+                          <td><a class="name" href="${data.channel.url}" target="_blank" title="In CodePen: right-click -> open link in new tab" rel="noopener noreferrer">${data.name}</a>
+                              ${data.channel.game ? `<div class="game"><small>${data.channel.game}</small></div>` : ''}
                           </td>
-                          <td class="stream"><div class="status">Streaming</div>
-                          <small><div class="description">${data.channel.status}</div></small>
+                          <td class="stream">&#x25B6;
+                           ${data.channel.status}
                           </td>`;
       return channelRow;
     }
 
     function renderChannelRow(data, parentTable) {
 
-      let channelRow;
-      if (data.channel.error) {
-        channelRow = createChannelNotFoundElement(data.name);
-      } else {
-        channelRow = data.stream ? createChannelStreamingElement(data) : createChannelOfflineElement(data);
-        channelRow.setAttribute("url", data.channel.url);
-        channelRow.onclick = function () {
-          window.open(data.channel.url, '_blank');
-        };
+      switch(data.status) {
+        case "Streaming":
+          parentTable.appendChild(createChannelStreamingElement(data));
+          return;
+        case "Offline":
+          parentTable.appendChild(createChannelOfflineElement(data));
+          return;
+        default:
+          parentTable.appendChild(createChannelNotFoundElement(data));
+          return;
       }
-
-      parentTable.appendChild(channelRow);
-
     }
 
-    function renderChannels() {
+    function createChannelArray() {
 
-      //be sure the channels are sorted alphabetically
-      channelList.sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
-
-      const main = document.querySelector('main');
-      const channelTable = document.createElement("table");
-
-      //We need to make separate Ajax calls per channel
-      // so render table when all are done
-
-      return channelList.reduce((chain, channel) => {
-        return chain.then(() => {
-          return getChannelData(channel);
-        }).then((data) => {
-          renderChannelRow(data, channelTable);
-        }).catch(() => {
-          const data = {
-            name: channel,
-            channel: {error: true}
-          };
-          renderChannelRow(data, channelTable);
+      return channelList.reduce((promiseChain,channel) => {
+        return promiseChain.then(chainResults => {
+          return getChannelData(channel)
+            .then(data => {
+              return [...chainResults, data];
+            }).catch(() => {
+              //in case there is any other error, render as if not found in API
+              return [...chainResults, {name: channel, channel: {error: true}}];
+            });
         });
-      }, Promise.resolve())
-        .then(() => {
-          main.appendChild(channelTable);
-        })
-        .catch((err) => console.log(err))
+      },Promise.resolve([]));
+    }
+
+    function sortChannelArray(prev,next) {
+      //if same status, sort alphabetically
+      // otherwise prioritize Streaming > Offline > Not Found
+      if (prev.status === next.status) {
+        return prev.name.toLowerCase() < next.name.toLowerCase() ? -1 : 1;
+      }
+      if (prev.status === "Streaming" || prev.status === "Offline" && next.status === "Not Found") {
+        return -1;
+      } else {
+        return 1;
+      }
+    }
+
+    function addChannelRows() {
+      const channelTable = document.querySelector('.channels');
+
+      createChannelArray()
+        .then(arr => {
+          arr.sort(sortChannelArray);
+          arr.map(channel => {
+            renderChannelRow(channel,channelTable)
+          });
+        }).catch(() => {
+          //in case of total failure provide message
+          document.querySelector('.channels').innerText = "Unexpected API Failure :(";
+      }).then(() => {
+          //always hide loader
+          document.querySelector('.loader').style.display = "none";
+      });
     }
 
     return {
-      renderChannels: renderChannels
+      addChannelRows : addChannelRows
     }
 
   })(window.document);
 
-//load channels upon load of page
-twitchStreams.renderChannels();
+twitchStreams.addChannelRows();
